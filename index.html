@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>埃及冒險之旅 🇪🇬</title>
+  
+  <!-- 載入 Vue 3 & Tailwind CSS & SortableJS & FontAwesome -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Noto Sans TC"', 'sans-serif'] },
+          colors: {
+            egypt: { 
+              bg: '#F9F6F0',   /* 延伸底色 */
+              sand: '#E3D3B6', /* 溫暖沙色 */
+              gold: '#C8A97E', /* 點綴金 */
+              blue: '#2C3E50', /* 尼羅河深藍字體 */
+              accent: '#D35400'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #e5e5e5; display: flex; justify-content: center; margin: 0; }
+    /* 模擬手機外觀 */
+    #app-container { width: 100%; max-w-md; max-width: 430px; height: 100vh; background: #F9F6F0; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    /* 隱藏捲軸但保持可滑動 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass-tab { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body>
+
+<div id="app" id="app-container" class="w-full max-w-[430px] h-screen bg-egypt-bg relative flex flex-col shadow-2xl">
+  
+  <!-- 頁首 Banner (滿版 250px) -->
+  <!-- 請將下方 url 的引號內換成您上傳圖片的真實網址 -->
+  <div class="w-full h-[250px] bg-cover bg-center relative shrink-0" 
+       style="background-image: url('https://images.unsplash.com/photo-1539650116574-8efeb43e2750?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80'); background-color: #D4B895;">
+    
+    <!-- 浮動分頁標籤 (右下角) -->
+    <div class="absolute bottom-10 right-4 flex space-x-2 z-50">
+      <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id"
+              class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-md glass-tab"
+              :class="currentTab === tab.id ? 'text-egypt-gold scale-110 border-2 border-egypt-gold' : 'text-gray-500 border border-gray-200'">
+        <i :class="tab.icon"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 主內容區 (利用負邊距向上重疊，呈現圓弧無縫感) -->
+  <div class="flex-1 bg-white -mt-6 rounded-t-[28px] z-10 overflow-y-auto no-scrollbar relative shadow-[0_-8px_15px_rgba(0,0,0,0.05)] pb-20">
+    
+    <!-- === 每日行程表 (Itinerary) === -->
+    <div v-show="currentTab === 'itinerary'" class="animate-fade-in">
+      <!-- 橫向日期選擇器 -->
+      <div class="flex overflow-x-auto no-scrollbar pt-6 pb-4 px-4 space-x-4 border-b border-gray-100">
+        <div v-for="d in dates" :key="d.date" @click="selectDate(d)"
+             class="flex flex-col items-center justify-center min-w-[60px] h-[70px] rounded-2xl cursor-pointer transition-colors"
+             :class="selectedDate.date === d.date ? 'bg-egypt-blue text-white shadow-md' : 'bg-gray-50 text-gray-500'">
+          <span class="text-xl font-bold">{{ d.day }}</span>
+          <span class="text-sm mt-1">{{ d.dateStr }}</span>
+        </div>
+      </div>
+
+      <!-- 天氣資訊 -->
+      <div class="mx-5 mt-4 flex items-center justify-between bg-blue-50/50 p-3 rounded-xl">
+        <div class="flex items-center space-x-2 text-egypt-blue">
+          <i class="fa-solid fa-sun text-yellow-500 text-xl"></i>
+          <span class="font-medium">開羅 / 晴朗</span>
+        </div>
+        <div class="text-sm text-gray-600">氣溫 28°C / 體感 30°C</div>
+      </div>
+
+      <!-- 行程卡片清單 (可拖曳) -->
+      <div class="px-5 pt-4 pb-10" id="sortable-list">
+        <div v-for="(item, index) in currentItinerary" :key="item.id" class="mb-4 relative group data-id" :data-id="item.id">
+          
+          <!-- 交通時間提示 (除第一個以外) -->
+          <div v-if="index > 0" class="flex items-center justify-center h-8 text-xs text-gray-400 mb-2">
+            <div class="w-px h-full bg-gray-200 absolute left-8 top-[-10px] -z-10"></div>
+            <i class="fa-solid fa-car mr-2 bg-white px-1"></i> 約 30 分鐘
+          </div>
+
+          <!-- 第一天首筆：前日住宿到此處 (模擬) -->
+          <div v-if="index === 0 && selectedDate.date !== '10/24'" class="flex items-center justify-center h-6 text-xs text-gray-400 mb-2">
+            <i class="fa-solid fa-walking mr-2 bg-white px-1"></i> 從飯店出發
+          </div>
+
+          <!-- 卡片本體 -->
+          <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-4 flex flex-col transition-all">
+            <div class="flex justify-between items-start">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-egypt-sand/20 flex items-center justify-center text-egypt-gold">
+                  <i :class="getCategoryIcon(item.category)"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-egypt-blue text-lg">{{ item.name }}</h3>
+                  <p class="text-xs text-gray-400 mt-1" v-if="item.time">{{ item.time }}</p>
+                </div>
+              </div>
+              <!-- 功能按鈕：導航 & 刪除 -->
+              <div class="flex space-x-3 text-gray-300">
+                <a :href="'https://www.google.com/maps/search/?api=1&query=' + item.name" target="_blank" class="hover:text-blue-500">
+                  <i class="fa-solid fa-location-arrow"></i>
+                </a>
+                <button @click="deleteItinerary(item.id)" class="hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+            
+            <div class="mt-3 pl-12">
+              <p v-if="item.ticket" class="text-sm text-gray-600 mb-1"><i class="fa-solid fa-ticket mr-1 text-gray-400"></i> {{ item.ticket }}</p>
+              <p v-if="item.note" class="text-sm text-gray-500 bg-gray-50 p-2 rounded-lg leading-relaxed">{{ item.note }}</p>
+            </div>
+          </div>
+        </div>
+        <div v-if="currentItinerary.length === 0" class="text-center text-gray-400 py-10">尚無行程，點擊右下角新增</div>
+      </div>
+
+      <!-- 懸浮新增按鈕 -->
+      <button @click="openAddModal" class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-gold text-white rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-yellow-600 transition z-50">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </div>
+
+    <!-- === 資訊 (Info) === -->
+    <div v-show="currentTab === 'info'" class="p-5 animate-fade-in space-y-6">
+      <h2 class="text-xl font-bold text-egypt-blue border-l-4 border-egypt-gold pl-3">匯率換算</h2>
+      <div class="bg-gray-50 rounded-2xl p-4 flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="font-medium">美金 (USD)</span>
+          <input type="number" v-model="usdInput" class="w-24 text-right p-1 border-b bg-transparent focus:outline-none" placeholder="輸入金額">
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="font-medium text-gray-400">台幣 (TWD)</span>
+          <span class="text-lg font-bold text-egypt-blue">NT$ {{ (usdInput * 32.5).toLocaleString() }}</span>
+        </div>
+      </div>
+
+      <h2 class="text-xl font-bold text-egypt-blue border-l-4 border-egypt-gold pl-3">航班資訊</h2>
+      <div class="bg-white border shadow-sm rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center text-sm font-bold text-egypt-blue">
+          <span>TPE (台北)</span>
+          <i class="fa-solid fa-plane text-egypt-gold"></i>
+          <span>CAI (開羅)</span>
+        </div>
+        <div class="text-xs text-gray-500 flex justify-between">
+          <span>10/24 19:25</span>
+          <span>阿提哈德</span>
+          <span>10/25 06:10</span>
+        </div>
+        <hr class="border-dashed">
+        <div class="flex justify-between items-center text-sm font-bold text-egypt-blue">
+          <span>CAI (開羅)</span>
+          <i class="fa-solid fa-plane text-egypt-gold"></i>
+          <span>TPE (台北)</span>
+        </div>
+        <div class="text-xs text-gray-500 flex justify-between">
+          <span>11/05 14:05</span>
+          <span>阿提哈德</span>
+          <span>11/06 09:00</span>
+        </div>
+      </div>
+
+      <h2 class="text-xl font-bold text-egypt-blue border-l-4 border-egypt-gold pl-3">住宿備忘</h2>
+      <div class="space-y-3">
+        <div class="bg-gray-50 p-3 rounded-xl">
+          <h4 class="font-bold text-sm">Aqmar Hotel (開羅)</h4>
+          <p class="text-xs text-gray-500 mt-1">入住：10/25 | 10/25現場付尾款，不含早</p>
+        </div>
+        <div class="bg-gray-50 p-3 rounded-xl">
+          <h4 class="font-bold text-sm">Obelisk Nile Hotel (阿斯旺)</h4>
+          <p class="text-xs text-gray-500 mt-1">入住：10/29 | 10/24 12:00 自動扣尾款</p>
+        </div>
+      </div>
+
+      <h2 class="text-xl font-bold text-egypt-blue border-l-4 border-egypt-gold pl-3">行前叮嚀</h2>
+      <p class="text-sm text-gray-600 leading-relaxed bg-orange-50 p-4 rounded-xl">
+        ⚠️ <b>美金現鈔：</b>嚴格要求 2013 後新鈔，無折痕、無筆跡、無破損。<br>
+        ⚠️ <b>信用卡：</b>景點全面刷卡，需設定 4 位數 PIN 碼。<br>
+        ⚠️ <b>保暖：</b>11/03 清晨熱氣球採洋蔥式穿著。
+      </p>
+    </div>
+
+    <!-- === 購物清單 (Shopping) === -->
+    <div v-show="currentTab === 'shopping'" class="p-5 animate-fade-in">
+      <div class="grid grid-cols-2 gap-4">
+        <div v-for="item in shoppingList" :key="item.name" class="bg-white border rounded-xl overflow-hidden shadow-sm">
+          <div class="h-24 bg-gray-200 flex items-center justify-center text-gray-400 text-3xl overflow-hidden">
+            <img v-if="item.img" :src="item.img" class="w-full h-full object-cover">
+            <i v-else class="fa-solid fa-camera"></i>
+          </div>
+          <div class="p-2 text-center text-sm font-medium text-egypt-blue">{{ item.name }}</div>
+        </div>
+      </div>
+      <button class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-gold text-white rounded-full shadow-lg text-2xl flex items-center justify-center z-50">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </div>
+
+    <!-- === 花費 (Expenses) === -->
+    <div v-show="currentTab === 'expenses'" class="p-5 animate-fade-in h-full flex flex-col">
+      <div class="bg-egypt-blue text-white rounded-2xl p-5 mb-5 shadow-md text-center">
+        <div class="text-sm text-gray-300">總花費估算</div>
+        <div class="text-3xl font-bold mt-1">NT$ {{ totalExpenseTWD.toLocaleString() }}</div>
+        <div class="text-xs mt-2 opacity-80">含導遊公費 6,946 USD (4人攤)</div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-3 pb-20">
+        <div v-for="(exp, i) in expenses" :key="i" class="flex justify-between items-center p-3 border-b">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-egypt-gold">
+              <i :class="getCategoryIcon(exp.category)"></i>
+            </div>
+            <div>
+              <div class="font-bold text-sm">{{ exp.name }}</div>
+              <div class="text-xs text-gray-400">{{ exp.date }} | {{ exp.payment }}</div>
+            </div>
+          </div>
+          <div class="font-bold font-mono text-egypt-blue">{{ exp.currency }} {{ exp.amount }}</div>
+        </div>
+      </div>
+
+      <button class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-gold text-white rounded-full shadow-lg text-2xl flex items-center justify-center z-50">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- 新增行程 Modal (隱藏版面) -->
+  <div v-if="isModalOpen" class="absolute inset-0 bg-black/50 z-[100] flex justify-center items-end transition-opacity">
+    <div class="bg-white w-full max-w-md rounded-t-[30px] p-6 pb-10 shadow-2xl slide-up">
+      <div class="flex justify-between items-center mb-5">
+        <h3 class="text-xl font-bold">新增行程</h3>
+        <button @click="isModalOpen = false" class="text-gray-400"><i class="fa-solid fa-times text-xl"></i></button>
+      </div>
+      <div class="space-y-4">
+        <select v-model="newItem.category" class="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none">
+          <option value="景點">景點</option><option value="住宿">住宿</option>
+          <option value="美食">美食</option><option value="購物">購物</option>
+          <option value="航班">航班</option><option value="其他">其他</option>
+        </select>
+        <input type="text" v-model="newItem.name" placeholder="名稱" class="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none">
+        <input type="text" v-model="newItem.time" placeholder="營業時間 / 班機時間" class="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none">
+        <input type="text" v-model="newItem.ticket" placeholder="門票資訊 (選填)" class="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none">
+        <textarea v-model="newItem.note" placeholder="特色 & 備註" class="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none h-20"></textarea>
+        <button @click="saveItinerary" class="w-full bg-egypt-blue text-white font-bold py-3 rounded-xl shadow-md">確認儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+  createApp({
+    setup() {
+      const tabs = [
+        { id: 'itinerary', icon: 'fa-solid fa-map-location-dot' },
+        { id: 'info', icon: 'fa-solid fa-circle-info' },
+        { id: 'shopping', icon: 'fa-solid fa-basket-shopping' },
+        { id: 'expenses', icon: 'fa-solid fa-sack-dollar' }
+      ];
+      const currentTab = ref('itinerary');
+      
+      const dates = ref([
+        { date: '10/24', day: 'Thu', dateStr: '24' }, { date: '10/25', day: 'Fri', dateStr: '25' },
+        { date: '10/26', day: 'Sat', dateStr: '26' }, { date: '10/27', day: 'Sun', dateStr: '27' },
+        { date: '10/28', day: 'Mon', dateStr: '28' }, { date: '10/29', day: 'Tue', dateStr: '29' },
+        { date: '10/30', day: 'Wed', dateStr: '30' }, { date: '10/31', day: 'Thu', dateStr: '31' },
+        { date: '11/01', day: 'Fri', dateStr: '01' }, { date: '11/02', day: 'Sat', dateStr: '02' },
+        { date: '11/03', day: 'Sun', dateStr: '03' }, { date: '11/04', day: 'Mon', dateStr: '04' },
+        { date: '11/05', day: 'Tue', dateStr: '05' }, { date: '11/06', day: 'Wed', dateStr: '06' }
+      ]);
+      const selectedDate = ref(dates.value[0]);
+
+      // 預設核心行程
+      const itineraryData = ref({
+        '10/24': [{ id: 1, category: '航班', name: '阿提哈德出發 (TPE)', time: '19:25 起飛', note: '啟程飛往開羅' }],
+        '10/25': [
+          { id: 2, category: '航班', name: '抵達開羅 (CAI)', time: '06:10 抵達', note: '接機、辦簽證' },
+          { id: 3, category: '景點', name: '埃及國家博物館', ticket: '需刷卡', note: '留意法老木乃伊區' },
+          { id: 4, category: '住宿', name: 'Aqmar Hotel', note: '現場付尾款，沈芳代墊結算' }
+        ],
+        '10/28': [{ id: 5, category: '景點', name: '黑白沙漠露營', note: '越野飆沙、觀星野炊' }],
+        '11/03': [
+          { id: 6, category: '景點', name: '盧克索熱氣球', time: '04:30 出發', note: '降落後會變熱，洋蔥穿法' },
+          { id: 7, category: '航班', name: '飛往開羅 MS0067', time: '19:45 起飛' }
+        ]
+      });
+
+      const currentItinerary = computed(() => itineraryData.value[selectedDate.value.date] || []);
+
+      const selectDate = async (d) => {
+        selectedDate.value = d;
+        await nextTick();
+        initSortable();
+      };
+
+      // 初始化拖曳排序
+      let sortableInstance = null;
+      const initSortable = () => {
+        const el = document.getElementById('sortable-list');
+        if (el && currentTab.value === 'itinerary') {
+          if (sortableInstance) sortableInstance.destroy();
+          sortableInstance = new Sortable(el, { animation: 150, handle: '.bg-white' });
+        }
+      };
+
+      onMounted(() => { initSortable(); });
+
+      // 新增與刪除
+      const isModalOpen = ref(false);
+      const newItem = ref({ category: '景點', name: '', time: '', ticket: '', note: '' });
+      const openAddModal = () => { newItem.value = { category: '景點', name: '', time: '', ticket: '', note: '' }; isModalOpen.value = true; };
+      const saveItinerary = () => {
+        if (!newItem.value.name) return alert('請填寫名稱');
+        if (!itineraryData.value[selectedDate.value.date]) itineraryData.value[selectedDate.value.date] = [];
+        itineraryData.value[selectedDate.value.date].push({ id: Date.now(), ...newItem.value });
+        isModalOpen.value = false;
+        nextTick(() => initSortable());
+      };
+      const deleteItinerary = (id) => {
+        if (confirm('確定要刪除這個行程嗎？')) {
+          itineraryData.value[selectedDate.value.date] = itineraryData.value[selectedDate.value.date].filter(i => i.id !== id);
+        }
+      };
+
+      // 圖示切換
+      const getCategoryIcon = (cat) => {
+        const icons = { '景點': 'fa-solid fa-camera', '住宿': 'fa-solid fa-bed', '美食': 'fa-solid fa-utensils', '購物': 'fa-solid fa-bag-shopping', '航班': 'fa-solid fa-plane-departure', '其他': 'fa-solid fa-star' };
+        return icons[cat] || icons['其他'];
+      };
+
+      // 工具變數
+      const usdInput = ref(100);
+      const shoppingList = ref([{ name: '星巴克杯', img: '' }, { name: '紙莎草畫', img: '' }]);
+      const expenses = ref([
+        { category: '門票', name: '導遊統包尾款(每人)', date: '10/25', amount: '1862', currency: 'USD', payment: '現金' },
+        { category: '住宿', name: 'Aqmar 訂金(每人)', date: '10/25', amount: '68.6', currency: 'USD', payment: '信用卡' }
+      ]);
+      const totalExpenseTWD = computed(() => 85000); // 依對話預估
+
+      return { tabs, currentTab, dates, selectedDate, selectDate, currentItinerary, isModalOpen, newItem, openAddModal, saveItinerary, deleteItinerary, getCategoryIcon, usdInput, shoppingList, expenses, totalExpenseTWD };
+    }
+  }).mount('#app');
+</script>
+<style>
+  .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</body>
+</html>
