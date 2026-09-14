@@ -19,10 +19,10 @@
           fontFamily: { sans: ['"Noto Sans TC"', 'sans-serif'] },
           colors: {
             egypt: { 
-              bg: '#EFDBBE',   /* 根據圖片下方砂岩底色延伸的暖沙色 */
-              sand: '#E3C598', /* 稍深的點綴沙色 */
-              gold: '#D69B52', /* 呼應金字塔與陽光的暖金色 */
-              blue: '#2A465B', /* 呼應天空與尼羅河的深藍色 */
+              bg: '#EFDBBE', 
+              sand: '#E3C598', 
+              gold: '#D69B52', 
+              blue: '#2A465B', 
               accent: '#C05A35'
             }
           }
@@ -34,36 +34,24 @@
     body { background-color: #e5e5e5; display: flex; justify-content: center; margin: 0; }
     /* 模擬手機外觀 */
     #app-container { width: 100%; max-w-md; max-width: 430px; height: 100vh; background: #EFDBBE; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-    /* 隱藏捲軸但保持可滑動 */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .glass-tab { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); }
   </style>
 </head>
 <body>
 
 <div id="app" id="app-container" class="w-full max-w-[430px] h-screen bg-egypt-bg relative flex flex-col shadow-2xl">
   
-  <!-- 頁首 Banner (滿版 250px) - 已換成您的專屬圖片 -->
+  <!-- 頁首 Banner (滿版 250px) - 按鈕已移除，完全還給美圖 -->
   <div class="w-full h-[250px] bg-cover bg-left-bottom relative shrink-0" 
        style="background-image: url('EG-WulaWuji.png'); background-color: #EFDBBE;">
-    
-    <!-- 浮動分頁標籤 (右下角) -->
-    <div class="absolute bottom-10 right-4 flex space-x-2 z-50">
-      <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id"
-              class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-md glass-tab"
-              :class="currentTab === tab.id ? 'text-egypt-gold scale-110 border-2 border-egypt-gold' : 'text-gray-500 border border-gray-200'">
-        <i :class="tab.icon"></i>
-      </button>
-    </div>
   </div>
 
-  <!-- 主內容區 (白底圓弧銜接，利用負邊距向上重疊) -->
-  <div class="flex-1 bg-[#FCFAEF] -mt-6 rounded-t-[28px] z-10 overflow-y-auto no-scrollbar relative shadow-[0_-8px_15px_rgba(0,0,0,0.05)] pb-20">
+  <!-- 主內容區 (白底圓弧銜接) - 底部增加 pb-32 以免被導覽列遮擋 -->
+  <div class="flex-1 bg-[#FCFAEF] -mt-6 rounded-t-[28px] z-10 overflow-y-auto no-scrollbar relative shadow-[0_-8px_15px_rgba(0,0,0,0.05)] pb-32">
     
     <!-- === 每日行程表 (Itinerary) === -->
     <div v-show="currentTab === 'itinerary'" class="animate-fade-in">
-      <!-- 橫向日期選擇器 -->
       <div class="flex overflow-x-auto no-scrollbar pt-6 pb-4 px-4 space-x-4 border-b border-gray-200/50">
         <div v-for="d in dates" :key="d.date" @click="selectDate(d)"
              class="flex flex-col items-center justify-center min-w-[65px] h-[75px] rounded-2xl cursor-pointer transition-colors"
@@ -73,7 +61,6 @@
         </div>
       </div>
 
-      <!-- 天氣資訊 -->
       <div class="mx-5 mt-4 flex items-center justify-between bg-white border border-gray-100 shadow-sm p-3 rounded-xl">
         <div class="flex items-center space-x-2 text-egypt-blue">
           <i class="fa-solid fa-sun text-egypt-gold text-xl"></i>
@@ -82,22 +69,17 @@
         <div class="text-sm text-gray-500">28°C / 體感 30°C</div>
       </div>
 
-      <!-- 行程卡片清單 (可拖曳) -->
       <div class="px-5 pt-4 pb-10" id="sortable-list">
         <div v-for="(item, index) in currentItinerary" :key="item.id" class="mb-4 relative group data-id" :data-id="item.id">
           
-          <!-- 交通時間提示 -->
           <div v-if="index > 0" class="flex items-center justify-center h-8 text-xs text-gray-400 mb-2">
             <div class="w-px h-full bg-gray-200 absolute left-8 top-[-10px] -z-10"></div>
             <i class="fa-solid fa-car mr-2 bg-[#FCFAEF] px-1 text-egypt-sand"></i> 約 30 分鐘
           </div>
-
-          <!-- 第一天首筆提示：從飯店出發 -->
           <div v-if="index === 0 && selectedDate.date !== '10/24' && item.category !== '航班'" class="flex items-center justify-center h-6 text-xs text-gray-400 mb-2">
             <i class="fa-solid fa-walking mr-2 bg-[#FCFAEF] px-1 text-egypt-sand"></i> 從飯店出發
           </div>
 
-          <!-- 卡片本體 -->
           <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-4 flex flex-col transition-all">
             <div class="flex justify-between items-start">
               <div class="flex items-center space-x-3">
@@ -109,7 +91,6 @@
                   <p class="text-xs text-gray-400 mt-1" v-if="item.time"><i class="fa-regular fa-clock mr-1"></i>{{ item.time }}</p>
                 </div>
               </div>
-              <!-- 功能按鈕：導航 & 刪除 -->
               <div class="flex space-x-3 text-gray-300">
                 <a :href="'https://www.google.com/maps/search/?api=1&query=' + item.name" target="_blank" class="hover:text-blue-500">
                   <i class="fa-solid fa-location-arrow"></i>
@@ -117,7 +98,6 @@
                 <button @click="deleteItinerary(item.id)" class="hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
-            
             <div class="mt-3 pl-12">
               <p v-if="item.ticket" class="text-xs text-egypt-accent font-medium mb-1 bg-orange-50 inline-block px-2 py-1 rounded"><i class="fa-solid fa-ticket mr-1"></i> {{ item.ticket }}</p>
               <p v-if="item.note" class="text-sm text-gray-500 mt-1 leading-relaxed">{{ item.note }}</p>
@@ -127,8 +107,8 @@
         <div v-if="currentItinerary.length === 0" class="text-center text-gray-400 py-10">今日無行程，點擊右下角新增</div>
       </div>
 
-      <!-- 懸浮新增按鈕 -->
-      <button @click="openAddModal" class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-lg text-2xl flex items-center justify-center hover:bg-opacity-90 transition z-50 border-2 border-white">
+      <!-- 懸浮新增按鈕 (已向上移動，避開底部導覽列) -->
+      <button @click="openAddModal" class="absolute bottom-[100px] right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] text-2xl flex items-center justify-center hover:bg-opacity-90 transition z-40 border-2 border-white">
         <i class="fa-solid fa-plus"></i>
       </button>
     </div>
@@ -190,13 +170,6 @@
           <p class="text-xs text-gray-500 mt-1">11/01-11/03 (2晚) | 10/31 自動扣款</p>
         </div>
       </div>
-
-      <h2 class="text-xl font-bold text-egypt-blue border-l-4 border-egypt-gold pl-3">行前叮嚀</h2>
-      <p class="text-sm text-gray-600 leading-relaxed bg-[#FDF2E9] border border-orange-100 p-4 rounded-xl shadow-sm">
-        ⚠️ <b>美金現鈔：</b>嚴格要求 2013 後新鈔，無折痕、無筆跡、無破損。<br>
-        ⚠️ <b>信用卡：</b>景點全面強制刷卡，需提前設定 4 位數預借現金密碼(PIN碼)。<br>
-        ⚠️ <b>熱氣球保暖：</b>11/03 清晨氣溫低風大，務必帶防風外套與薄圍巾，採洋蔥式穿法。
-      </p>
     </div>
 
     <!-- === 購物清單 (Shopping) === -->
@@ -210,7 +183,7 @@
           <div class="p-2 text-center text-sm font-medium text-egypt-blue">{{ item.name }}</div>
         </div>
       </div>
-      <button class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-lg text-2xl flex items-center justify-center z-50 border-2 border-white">
+      <button class="absolute bottom-[100px] right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] text-2xl flex items-center justify-center z-40 border-2 border-white">
         <i class="fa-solid fa-plus"></i>
       </button>
     </div>
@@ -223,7 +196,6 @@
         <div class="text-3xl font-bold mt-1 tracking-wider">NT$ {{ totalExpenseTWD.toLocaleString() }}</div>
         <div class="text-xs mt-2 opacity-80 bg-black/20 inline-block px-3 py-1 rounded-full">含導遊公費 6,946 USD (4人攤)</div>
       </div>
-
       <div class="flex-1 overflow-y-auto space-y-3 pb-20">
         <div v-for="(exp, i) in expenses" :key="i" class="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
           <div class="flex items-center space-x-3">
@@ -238,12 +210,22 @@
           <div class="font-bold font-mono text-egypt-accent">{{ exp.currency }} {{ exp.amount }}</div>
         </div>
       </div>
-
-      <button class="absolute bottom-6 right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-lg text-2xl flex items-center justify-center z-50 border-2 border-white">
+      <button class="absolute bottom-[100px] right-6 w-14 h-14 bg-egypt-blue text-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] text-2xl flex items-center justify-center z-40 border-2 border-white">
         <i class="fa-solid fa-plus"></i>
       </button>
     </div>
+  </div>
 
+  <!-- === 全新：手機 App 底部導覽列 (Bottom Navigation Bar) === -->
+  <div class="absolute bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-200 shadow-[0_-5px_20px_rgba(0,0,0,0.06)] pb-6 pt-3 px-6 flex justify-between items-center z-50">
+    <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id"
+            class="flex flex-col items-center justify-center w-16 transition-all duration-300"
+            :class="currentTab === tab.id ? 'text-egypt-blue scale-105' : 'text-gray-400 hover:text-gray-500'">
+      <div class="text-xl mb-1 transition-colors duration-300" :class="currentTab === tab.id ? 'text-egypt-gold drop-shadow-sm' : ''">
+         <i :class="tab.icon"></i>
+      </div>
+      <span class="text-[11px] font-medium tracking-wide" :class="currentTab === tab.id ? 'font-bold' : ''">{{ tab.label }}</span>
+    </button>
   </div>
 
   <!-- 新增行程 Modal -->
@@ -274,11 +256,12 @@
 
   createApp({
     setup() {
+      // 加入了 label 讓底部導覽列有文字標示
       const tabs = [
-        { id: 'itinerary', icon: 'fa-solid fa-map-location-dot' },
-        { id: 'info', icon: 'fa-solid fa-circle-info' },
-        { id: 'shopping', icon: 'fa-solid fa-basket-shopping' },
-        { id: 'expenses', icon: 'fa-solid fa-sack-dollar' }
+        { id: 'itinerary', icon: 'fa-solid fa-map-location-dot', label: '行程' },
+        { id: 'info', icon: 'fa-solid fa-circle-info', label: '資訊' },
+        { id: 'shopping', icon: 'fa-solid fa-basket-shopping', label: '購物' },
+        { id: 'expenses', icon: 'fa-solid fa-sack-dollar', label: '花費' }
       ];
       const currentTab = ref('itinerary');
       
@@ -293,7 +276,7 @@
       ]);
       const selectedDate = ref(dates.value[0]);
 
-      // 完整寫入每一天行程
+      // 行程資料庫
       const itineraryData = ref({
         '10/24': [
           { id: 1, category: '航班', name: '阿提哈德起飛 (TPE)', time: '19:25 起飛', note: '展開埃及冒險之旅！' }
@@ -381,7 +364,6 @@
         initSortable();
       };
 
-      // 初始化拖曳排序
       let sortableInstance = null;
       const initSortable = () => {
         const el = document.getElementById('sortable-list');
@@ -393,7 +375,6 @@
 
       onMounted(() => { initSortable(); });
 
-      // 新增與刪除
       const isModalOpen = ref(false);
       const newItem = ref({ category: '景點', name: '', time: '', ticket: '', note: '' });
       const openAddModal = () => { newItem.value = { category: '景點', name: '', time: '', ticket: '', note: '' }; isModalOpen.value = true; };
@@ -410,13 +391,11 @@
         }
       };
 
-      // 圖示切換
       const getCategoryIcon = (cat) => {
         const icons = { '景點': 'fa-solid fa-camera', '住宿': 'fa-solid fa-bed', '美食': 'fa-solid fa-utensils', '購物': 'fa-solid fa-bag-shopping', '航班': 'fa-solid fa-plane-departure', '其他': 'fa-solid fa-star' };
         return icons[cat] || icons['其他'];
       };
 
-      // 工具變數
       const usdInput = ref(100);
       const shoppingList = ref([{ name: '紙莎草畫', img: '' }, { name: '椰棗點心', img: '' }]);
       const expenses = ref([
